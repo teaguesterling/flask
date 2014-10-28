@@ -43,7 +43,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Flask'
-copyright = u'2013, Armin Ronacher'
+copyright = u'2014, Armin Ronacher'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -125,7 +125,7 @@ html_theme_path = ['_themes']
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = "flask-favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -244,11 +244,13 @@ latex_additional_files = ['flaskstyle.sty', 'logo.pdf']
 #epub_tocdepth = 3
 
 intersphinx_mapping = {
-    'http://docs.python.org/dev': None,
+    'https://docs.python.org/dev': None,
     'http://werkzeug.pocoo.org/docs/': None,
+    'http://click.pocoo.org/': None,
+    'http://jinja.pocoo.org/docs/': None,
     'http://www.sqlalchemy.org/docs/': None,
-    'http://wtforms.simplecodes.com/docs/0.5/': None,
-    'http://discorporate.us/projects/Blinker/docs/1.1/': None
+    'https://wtforms.readthedocs.org/en/latest/': None,
+    'https://pythonhosted.org/blinker/': None
 }
 
 pygments_style = 'flask_theme_support.FlaskyStyle'

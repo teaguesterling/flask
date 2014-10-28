@@ -1,4 +1,4 @@
-from flask import Flask, render_template, session, request, json, abort, g
+from flask import Flask, render_template, session, request, abort, g
 
 import requests
 
@@ -38,7 +38,7 @@ def login_handler():
         'audience': request.host_url,
     }, verify=True)
     if resp.ok:
-        verification_data = json.loads(resp.content)
+        verification_data = resp.json()
         if verification_data['status'] == 'okay':
             session['email'] = verification_data['email']
             return 'OK'
@@ -53,7 +53,3 @@ def logout_handler():
     """
     session.clear()
     return 'OK'
-
-
-if __name__ == '__main__':
-    app.run()

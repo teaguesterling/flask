@@ -3,10 +3,10 @@
 Step 1: Database Schema
 =======================
 
-First we want to create the database schema.  For this application only a
-single table is needed and we only want to support SQLite so that is quite
-easy.  Just put the following contents into a file named `schema.sql` in
-the just created `flaskr` folder:
+First we want to create the database schema. Only a single table is needed
+for this application and we only want to support SQLite  so creating the
+database schema is quite easy. Just put the following contents into a file
+named `schema.sql` in the just created `flaskr` folder:
 
 .. sourcecode:: sql
 
@@ -14,7 +14,7 @@ the just created `flaskr` folder:
     create table entries (
       id integer primary key autoincrement,
       title text not null,
-      text text not null
+      'text' text not null
     );
 
 This schema consists of a single table called `entries` and each row in

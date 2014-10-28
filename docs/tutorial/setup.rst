@@ -4,16 +4,17 @@ Step 2: Application Setup Code
 ==============================
 
 Now that we have the schema in place we can create the application module.
-Let's call it `flaskr.py` inside the `flaskr` folder.  For starters we
-will add the imports and create the application object.  For small
-applications it's a possibility to drop the configuration directly into
-the module which we will be doing here.  However a cleaner solution would
-be to create a separate `.ini` or `.py` file and load that or import the
-values from there.
+Let's call it flaskr.py. We will place this file inside the flaskr folder.
+We will begin by adding the imports we need and by adding the config
+section.  For small applications, it is possible to drop the configuration
+directly into the module, and this is what we will be doing here. However
+a cleaner solution would be to create a separate `.ini` or `.py` file and
+load that or import the values from there.
 
 First we add the imports in `flaskr.py`::
 
     # all the imports
+    import os
     import sqlite3
     from flask import Flask, request, session, g, redirect, url_for, abort, \
          render_template, flash
@@ -27,8 +28,7 @@ config from the same file, in `flaskr.py`::
 
     # Load default config and override config from an environment variable
     app.config.update(dict(
-        DATABASE='/tmp/flaskr.db',
-        DEBUG=True,
+        DATABASE=os.path.join(app.root_path, 'flaskr.db'),
         SECRET_KEY='development key',
         USERNAME='admin',
         PASSWORD='default'
@@ -38,11 +38,20 @@ config from the same file, in `flaskr.py`::
 The :class:`~flask.Config` object works similar to a dictionary so we
 can update it with new values.
 
-.. admonition:: Windows
+.. admonition:: Database Path
 
-    If you are on Windows, replace `/tmp/flaskr.db` with a different writeable
-    path of your choice, in the configuration and for the rest of this
-    tutorial.
+    Operating systems know the concept of a current working directory for
+    each process.  Unfortunately you cannot depend on this in web
+    applications because you might have more than one application in the
+    same process.
+
+    For this reason the ``app.root_path`` attribute can be used to
+    get the path to the application.  Together with the ``os.path`` module
+    files can then easily be found.  In this example we place the
+    database right next to it.
+
+    For a real-work application it's recommended to use
+    :ref:`instance-folders` instead.
 
 Usually, it is a good idea to load a separate, environment specific
 configuration file.  Flask allows you to import multiple configurations and it 
@@ -57,21 +66,19 @@ if no such environment key is set.
 
 In addition to that you can use the :meth:`~flask.Config.from_object`
 method on the config object and provide it with an import name of a
-module.  Flask will the initialize the variable from that module.  Note
+module.  Flask will then initialize the variable from that module.  Note
 that in all cases only variable names that are uppercase are considered.
 
 The ``SECRET_KEY`` is needed to keep the client-side sessions secure.
-Choose that key wisely and as hard to guess and complex as possible.  The
-debug flag enables or disables the interactive debugger.  *Never leave
-debug mode activated in a production system*, because it will allow users to
-execute code on the server!
+Choose that key wisely and as hard to guess and complex as possible.
 
-We also add a method to easily connect to the database specified.  That
-can be used to open a connection on request and also from the interactive
-Python shell or a script.  This will come in handy later.  We create a
-simple database connection through SQLite and then tell it to use the
-:class:`sqlite3.Row` object to represent rows.  This allows us to treat
-the rows as if they were dictionaries instead of tuples.
+We will also add a method that allows for  easily connecting to the
+specified database.  This can be used to open a connection on request and
+also from the interactive Python shell or a script.  This will come in
+handy later.  We create a simple database connection through SQLite and
+then tell it to use the :class:`sqlite3.Row` object to represent rows.
+This allows us to treat the rows as if they were dictionaries instead of
+tuples.
 
 ::
 
@@ -81,16 +88,14 @@ the rows as if they were dictionaries instead of tuples.
         rv.row_factory = sqlite3.Row
         return rv
 
-Finally we just add a line to the bottom of the file that fires up the
-server if we want to run that file as a standalone application::
-
-    if __name__ == '__main__':
-        app.run()
-
 With that out of the way you should be able to start up the application
 without problems.  Do this with the following command::
 
-   python flaskr.py
+    flask --app=flaskr --debug run
+
+The ``--debug`` flag enables or disables the interactive debugger.  *Never
+leave debug mode activated in a production system*, because it will allow
+users to execute code on the server!
 
 You will see a message telling you that server has started along with
 the address at which you can access it.

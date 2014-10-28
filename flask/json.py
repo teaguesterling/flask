@@ -5,7 +5,7 @@
 
     Implementation helpers for the JSON support in Flask.
 
-    :copyright: (c) 2012 by Armin Ronacher.
+    :copyright: (c) 2014 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
 import io
@@ -25,7 +25,7 @@ except ImportError:
     from itsdangerous import json as _json
 
 
-# figure out if simplejson escapes slashes.  This behavior was changed
+# Figure out if simplejson escapes slashes.  This behavior was changed
 # from one version to another without reason.
 _slash_escape = '\\/' not in _json.dumps('/')
 
@@ -119,7 +119,7 @@ def dumps(obj, **kwargs):
     This function can return ``unicode`` strings or ascii-only bytestrings by
     default which coerce into unicode strings automatically.  That behavior by
     default is controlled by the ``JSON_AS_ASCII`` configuration variable
-    and can be overriden by the simplejson ``ensure_ascii`` parameter.
+    and can be overridden by the simplejson ``ensure_ascii`` parameter.
     """
     _dump_arg_defaults(kwargs)
     encoding = kwargs.pop('encoding', None)
@@ -227,15 +227,22 @@ def jsonify(*args, **kwargs):
     This function's response will be pretty printed if it was not requested
     with ``X-Requested-With: XMLHttpRequest`` to simplify debugging unless
     the ``JSONIFY_PRETTYPRINT_REGULAR`` config parameter is set to false.
+    Compressed (not pretty) formatting currently means no indents and no
+    spaces after separators.
 
     .. versionadded:: 0.2
     """
+
     indent = None
+    separators = (',', ':')
+
     if current_app.config['JSONIFY_PRETTYPRINT_REGULAR'] \
        and not request.is_xhr:
         indent = 2
+        separators = (', ', ': ')
+
     return current_app.response_class(dumps(dict(*args, **kwargs),
-        indent=indent),
+        indent=indent, separators=separators),
         mimetype='application/json')
 
 

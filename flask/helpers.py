@@ -5,7 +5,7 @@
 
     Implements various helpers.
 
-    :copyright: (c) 2011 by Armin Ronacher.
+    :copyright: (c) 2014 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
 
@@ -199,16 +199,16 @@ def url_for(endpoint, **values):
     For more information, head over to the :ref:`Quickstart <url-building>`.
 
     To integrate applications, :class:`Flask` has a hook to intercept URL build
-    errors through :attr:`Flask.build_error_handler`.  The `url_for` function
-    results in a :exc:`~werkzeug.routing.BuildError` when the current app does
-    not have a URL for the given endpoint and values.  When it does, the
-    :data:`~flask.current_app` calls its :attr:`~Flask.build_error_handler` if
+    errors through :attr:`Flask.url_build_error_handlers`.  The `url_for`
+    function results in a :exc:`~werkzeug.routing.BuildError` when the current
+    app does not have a URL for the given endpoint and values.  When it does, the
+    :data:`~flask.current_app` calls its :attr:`~Flask.url_build_error_handlers` if
     it is not `None`, which can return a string to use as the result of
     `url_for` (instead of `url_for`'s default to raise the
     :exc:`~werkzeug.routing.BuildError` exception) or re-raise the exception.
     An example::
 
-        def external_url_handler(error, endpoint, **values):
+        def external_url_handler(error, endpoint, values):
             "Looks up an external URL when `url_for` cannot build a URL."
             # This is an example of hooking the build_error_handler.
             # Here, lookup_url is some utility function you've built
@@ -225,10 +225,10 @@ def url_for(endpoint, **values):
             # url_for will use this result, instead of raising BuildError.
             return url
 
-        app.build_error_handler = external_url_handler
+        app.url_build_error_handlers.append(external_url_handler)
 
     Here, `error` is the instance of :exc:`~werkzeug.routing.BuildError`, and
-    `endpoint` and `**values` are the arguments passed into `url_for`.  Note
+    `endpoint` and `values` are the arguments passed into `url_for`.  Note
     that this is for building URLs outside the current application, and not for
     handling 404 NotFound errors.
 
@@ -248,7 +248,11 @@ def url_for(endpoint, **values):
       address can be changed via `SERVER_NAME` configuration variable which
       defaults to `localhost`.
     :param _scheme: a string specifying the desired URL scheme. The `_external`
-      parameter must be set to `True` or a `ValueError` is raised.
+      parameter must be set to `True` or a `ValueError` is raised. The default
+      behavior uses the same scheme as the current request, or
+      ``PREFERRED_URL_SCHEME`` from the :ref:`app configuration <config>` if no
+      request context is available. As of Werkzeug 0.10, this also can be set
+      to an empty string to build protocol-relative URLs.
     :param _anchor: if provided this is added as anchor to the URL.
     :param _method: if provided this explicitly specifies an HTTP method.
     """
@@ -260,7 +264,7 @@ def url_for(endpoint, **values):
                            'executed when application context is available.')
 
     # If request specific information is available we have some extra
-    # features that support "relative" urls.
+    # features that support "relative" URLs.
     if reqctx is not None:
         url_adapter = reqctx.url_adapter
         blueprint_name = request.blueprint
@@ -280,7 +284,7 @@ def url_for(endpoint, **values):
         external = values.pop('_external', False)
 
     # Otherwise go with the url adapter from the appctx and make
-    # the urls external by default.
+    # the URLs external by default.
     else:
         url_adapter = appctx.url_adapter
         if url_adapter is None:
@@ -359,7 +363,7 @@ def flash(message, category='message'):
     #     session.setdefault('_flashes', []).append((category, message))
     #
     # This assumed that changes made to mutable structures in the session are
-    # are always in sync with the sess on object, which is not true for session
+    # are always in sync with the session object, which is not true for session
     # implementations that use external storage for keeping their keys/values.
     flashes = session.get('_flashes', [])
     flashes.append((category, message))
@@ -525,7 +529,7 @@ def send_file(filename_or_fp, mimetype=None, as_attachment=False,
     rv = current_app.response_class(data, mimetype=mimetype, headers=headers,
                                     direct_passthrough=True)
 
-    # if we know the file modification date, we can store it as the
+    # if we know the file modification date, we can store it as
     # the time of the last modification.
     if mtime is not None:
         rv.last_modified = int(mtime)
@@ -538,14 +542,19 @@ def send_file(filename_or_fp, mimetype=None, as_attachment=False,
         rv.expires = int(time() + cache_timeout)
 
     if add_etags and filename is not None:
-        rv.set_etag('flask-%s-%s-%s' % (
-            os.path.getmtime(filename),
-            os.path.getsize(filename),
-            adler32(
-                filename.encode('utf-8') if isinstance(filename, text_type)
-                else filename
-            ) & 0xffffffff
-        ))
+        try:
+            rv.set_etag('flask-%s-%s-%s' % (
+                os.path.getmtime(filename),
+                os.path.getsize(filename),
+                adler32(
+                    filename.encode('utf-8') if isinstance(filename, text_type)
+                    else filename
+                ) & 0xffffffff
+            ))
+        except OSError:
+            warn('Access %s failed, maybe it does not exist, so ignore etags in '
+                 'headers' % filename, stacklevel=2)
+
         if conditional:
             rv = rv.make_conditional(request)
             # make sure we don't send x-sendfile for servers that
@@ -564,7 +573,7 @@ def safe_join(directory, filename):
         def wiki_page(filename):
             filename = safe_join(app.config['WIKI_FOLDER'], filename)
             with open(filename, 'rb') as fd:
-                content = fd.read() # Read and process the file content...
+                content = fd.read()  # Read and process the file content...
 
     :param directory: the base directory.
     :param filename: the untrusted filename relative to that directory.
@@ -610,6 +619,8 @@ def send_from_directory(directory, filename, **options):
                     forwarded to :func:`send_file`.
     """
     filename = safe_join(directory, filename)
+    if not os.path.isabs(filename):
+        filename = os.path.join(current_app.root_path, filename)
     if not os.path.isfile(filename):
         raise NotFound()
     options.setdefault('conditional', True)
@@ -643,10 +654,46 @@ def get_root_path(import_name):
     else:
         # Fall back to imports.
         __import__(import_name)
-        filepath = sys.modules[import_name].__file__
+        mod = sys.modules[import_name]
+        filepath = getattr(mod, '__file__', None)
+
+        # If we don't have a filepath it might be because we are a
+        # namespace package.  In this case we pick the root path from the
+        # first module that is contained in our package.
+        if filepath is None:
+            raise RuntimeError('No root path can be found for the provided '
+                               'module "%s".  This can happen because the '
+                               'module came from an import hook that does '
+                               'not provide file name information or because '
+                               'it\'s a namespace package.  In this case '
+                               'the root path needs to be explicitly '
+                               'provided.' % import_name)
 
     # filepath is import_name.py for a module, or __init__.py for a package.
     return os.path.dirname(os.path.abspath(filepath))
+
+
+def _matching_loader_thinks_module_is_package(loader, mod_name):
+    """Given the loader that loaded a module and the module this function
+    attempts to figure out if the given module is actually a package.
+    """
+    # If the loader can tell us if something is a package, we can
+    # directly ask the loader.
+    if hasattr(loader, 'is_package'):
+        return loader.is_package(mod_name)
+    # importlib's namespace loaders do not have this functionality but
+    # all the modules it loads are packages, so we can take advantage of
+    # this information.
+    elif (loader.__class__.__module__ == '_frozen_importlib' and
+          loader.__class__.__name__ == 'NamespaceLoader'):
+        return True
+    # Otherwise we need to fail with an error that explains what went
+    # wrong.
+    raise AttributeError(
+        ('%s.is_package() method is missing but is required by Flask of '
+         'PEP 302 import hooks.  If you do not use import hooks and '
+         'you encounter this error please file a bug against Flask.') %
+        loader.__class__.__name__)
 
 
 def find_package(import_name):
@@ -678,14 +725,13 @@ def find_package(import_name):
             __import__(import_name)
             filename = sys.modules[import_name].__file__
         package_path = os.path.abspath(os.path.dirname(filename))
-        # package_path ends with __init__.py for a package
-        if hasattr(loader, 'is_package'):
-            if loader.is_package(root_mod_name):
-                package_path = os.path.dirname(package_path)
-        else:
-            raise AttributeError(
-                ('%s.is_package() method is missing but is '
-                 'required by Flask of PEP 302 import hooks') % loader.__class__.__name__)
+
+        # In case the root module is a package we need to chop of the
+        # rightmost part.  This needs to go through a helper function
+        # because of python 3.3 namespace packages.
+        if _matching_loader_thinks_module_is_package(
+                loader, root_mod_name):
+            package_path = os.path.dirname(package_path)
 
     site_parent, site_folder = os.path.split(package_path)
     py_prefix = os.path.abspath(sys.prefix)
@@ -733,7 +779,7 @@ class locked_cached_property(object):
 
 class _PackageBoundObject(object):
 
-    def __init__(self, import_name, template_folder=None):
+    def __init__(self, import_name, template_folder=None, root_path=None):
         #: The name of the package or module.  Do not change this once
         #: it was set by the constructor.
         self.import_name = import_name
@@ -742,8 +788,11 @@ class _PackageBoundObject(object):
         #: exposed.
         self.template_folder = template_folder
 
+        if root_path is None:
+            root_path = get_root_path(self.import_name)
+
         #: Where is the app root located?
-        self.root_path = get_root_path(self.import_name)
+        self.root_path = root_path
 
         self._static_folder = None
         self._static_url_path = None

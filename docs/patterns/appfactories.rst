@@ -54,30 +54,52 @@ get access to the application with the config?  Use
 
 Here we look up the name of a template in the config.
 
-Extension objects are not initially bound to an application. Using
-``db.init_app``, the app gets configured for the extension. No
-application-specific state is stored on the extension object, so one extension
-object can be used for multiple apps. For more information about the design of
-extensions refer to :doc:`/extensiondev`.
+Factories & Extensions
+----------------------
 
-Your `model.py` might look like this when using `Flask-SQLAlchemy
-<http://pythonhosted.org/Flask-SQLAlchemy/>`_::
+It's preferable to create your extensions and app factories so that the
+extension object does not initially get bound to the application.
 
-    from flask.ext.sqlalchemy import SQLAlchemy
-    # no app object passed! Instead we use use db.init_app in the factory.
+Using `Flask-SQLAlchemy <http://pythonhosted.org/Flask-SQLAlchemy/>`_, 
+as an example, you should not do something along those lines::
+    
+    def create_app(config_filename):
+        app = Flask(__name__)
+        app.config.from_pyfile(config_filename)
+
+        db = SQLAlchemy(app)
+
+But, rather, in model.py (or equivalent)::
+
     db = SQLAlchemy()
+    
+and in your application.py (or equivalent)::
 
-    # create some models
+    def create_app(config_filename):
+        app = Flask(__name__)
+        app.config.from_pyfile(config_filename)
+
+        from yourapplication.model import db
+        db.init_app(app)
+
+Using this design pattern, no application-specific state is stored on the
+extension object, so one extension object can be used for multiple apps. 
+For more information about the design of extensions refer to :doc:`/extensiondev`.
 
 Using Applications
 ------------------
 
 So to use such an application you then have to create the application
-first.  Here an example `run.py` file that runs such an application::
+first in a separate file otherwise the ``flask`` command won't be able
+to find it.  Here an example `exampleapp.py` file that creates such
+an application::
 
     from yourapplication import create_app
     app = create_app('/path/to/config.cfg')
-    app.run()
+
+It can then be used with the ``flask`` command::
+
+    flask --app=exampleapp run
 
 Factory Improvements
 --------------------

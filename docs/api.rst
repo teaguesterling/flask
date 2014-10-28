@@ -86,6 +86,7 @@ Incoming Request Data
       The current request method (``POST``, ``GET`` etc.)
 
    .. attribute:: path
+   .. attribute:: full_path
    .. attribute:: script_root
    .. attribute:: url
    .. attribute:: base_url
@@ -105,6 +106,7 @@ Incoming Request Data
 
       ============= ======================================================
       `path`        ``/page.html``
+      `full_path`   ``/page.html?x=y``
       `script_root` ``/myapplication``
       `base_url`    ``http://www.example.com/myapplication/page.html``
       `url`         ``http://www.example.com/myapplication/page.html?x=y``
@@ -142,7 +144,7 @@ Response Objects
 
    .. attribute:: headers
 
-      A :class:`Headers` object representing the response headers.
+      A :class:`~werkzeug.datastructures.Headers` object representing the response headers.
 
    .. attribute:: status
 
@@ -385,6 +387,15 @@ you are using Flask 0.10 which implies that:
         doSomethingWith({{ user.username|tojson|safe }});
     </script>
 
+.. admonition:: Auto-Sort JSON Keys
+
+    The configuration variable ``JSON_SORT_KEYS`` (:ref:`config`) can be
+    set to false to stop Flask from auto-sorting keys.  By default sorting
+    is enabled and outside of the app context sorting is turned on.
+
+    Notice that disabling key sorting can cause issues when using content
+    based HTTP caches and Python's hash randomization feature.
+
 .. autofunction:: jsonify
 
 .. autofunction:: dumps
@@ -588,7 +599,7 @@ Signals
       do nothing but will fail with a :exc:`RuntimeError` for all other
       operations, including connecting.
 
-.. _blinker: http://pypi.python.org/pypi/blinker
+.. _blinker: https://pypi.python.org/pypi/blinker
 
 Class-Based Views
 -----------------
@@ -744,3 +755,35 @@ Full example::
 
 .. versionadded:: 0.8
    The `provide_automatic_options` functionality was added.
+
+Command Line Interface
+----------------------
+
+.. currentmodule:: flask.cli
+
+.. autoclass:: FlaskGroup
+   :members:
+
+.. autoclass:: AppGroup
+   :members:
+
+.. autoclass:: ScriptInfo
+   :members:
+
+.. autofunction:: with_appcontext
+
+.. autofunction:: pass_script_info
+
+   Marks a function so that an instance of :class:`ScriptInfo` is passed
+   as first argument to the click callback.
+
+.. autofunction:: script_info_option
+
+   A special decorator that informs a click callback to be passed the
+   script info object as first argument.  This is normally not useful
+   unless you implement very special commands like the run command which
+   does not want the application to be loaded yet. 
+
+.. autodata:: run_command
+
+.. autodata:: shell_command

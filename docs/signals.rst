@@ -148,7 +148,7 @@ signal subscribers::
             model_saved.send(self)
 
 Try to always pick a good sender.  If you have a class that is emitting a
-signal, pass `self` as sender.  If you emitting a signal from a random
+signal, pass `self` as sender.  If you are emitting a signal from a random
 function, you can pass ``current_app._get_current_object()`` as sender.
 
 .. admonition:: Passing Proxies as Senders
@@ -322,6 +322,7 @@ The following signals exist in Flask:
    .. versionadded:: 0.10
 
 .. data:: flask.appcontext_popped
+   :noindex:
 
    This signal is sent when an application context is popped.  The sender
    is the application.  This usually falls in line with the
@@ -348,4 +349,4 @@ The following signals exist in Flask:
 
    .. versionadded:: 0.10
 
-.. _blinker: http://pypi.python.org/pypi/blinker
+.. _blinker: https://pypi.python.org/pypi/blinker
